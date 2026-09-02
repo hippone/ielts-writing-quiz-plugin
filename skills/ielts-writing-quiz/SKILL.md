@@ -1,11 +1,14 @@
 ---
 name: ielts-writing-quiz
-description: Generate and run persistent evidence-grounded IELTS Writing micro-quizzes from a learner essay or diagnosed blocker. Use when the user asks to 出题, 生成 quiz, 做针对性练习, resume a quiz, or evaluate a quiz-card response; do not use it to score an essay or write replacement prose.
+description: Diagnose one IELTS Writing blocker, recommend and track one of nine learning methods in concise local Markdown memory, or generate persistent evidence-grounded micro-quizzes. Use for 写作方法, 学习计划, 方法切换, 学习记录, 出题, targeted practice, resume, and evaluation; do not assign an IELTS band or write replacement prose.
 ---
 
 # IELTS Writing Quiz
 
-Use the active Codex model for generation, hints, and semantic evaluation. Use the bundled `ielts_writing_quiz` MCP tools only for authoritative session state and transition validation; the MCP server does not call a model API.
+Use the active Codex model for diagnosis, method recommendation, generation, hints,
+and semantic evaluation. Use the bundled `ielts_writing_quiz` MCP tools only for
+authoritative Quiz state, concise Markdown learning memory, and transition validation;
+the MCP server does not call a model API.
 
 ## Boundaries
 
@@ -14,6 +17,29 @@ Use the active Codex model for generation, hints, and semantic evaluation. Use t
 - Do not reveal a model sentence, completed reasoning chain, private checklist, prompt metadata, or internal skill code.
 - Do not score the essay unless the user separately requests assessment.
 - Keep quoted learner evidence exact and in its original language.
+
+## Choose And Track A Learning Method
+
+When the user asks which method fits, whether to continue or switch, or whether the
+current weakness is resolved:
+
+1. Read [references/learning-methods.md](references/learning-methods.md).
+2. Read [references/learning-memory.md](references/learning-memory.md).
+3. Call `learning_get_memory` before using prior learning state.
+4. Ground one current weakness in an exact learner quote. If there is no essay or
+   learner-owned artifact, ask for it rather than inventing a diagnosis.
+5. Call `learning_list_methods` when task compatibility is not already known, then
+   recommend one primary method using the active model. Do not claim effectiveness.
+6. Start, record, switch, or close through the matching learning tool. Never edit the
+   learning-memory file directly.
+7. Record only checkpoints that change the next learning decision. One successful
+   mutation adds one natural-language line and refreshes the summary in the same
+   `LEARNING_MEMORY.md` file.
+
+Method completion, same-prompt repair, Quiz performance, different-topic transfer,
+and IELTS band movement are separate conclusions. A switch requires explicit learner
+confirmation. Only the Harness may promote the local skill state, and even `stable`
+is local learning evidence rather than an IELTS score claim.
 
 ## Start A Quiz
 
@@ -24,6 +50,10 @@ Require a learner essay or paragraph. Accept an original IELTS prompt and diagno
 3. Call `quiz_create_session` once with only public item fields.
 4. Treat the returned session as authoritative. Never invent a session ID or revision.
 5. In Codex, render that returned state with [references/codex-cards.md](references/codex-cards.md). Card rendering is a completion gate: do not finish the turn until the current visualization file has been verified and the same final response contains its `visualize` content reference. Otherwise show the current question in Markdown.
+
+When a Quiz belongs to an active learning method, load learning memory first. After a
+meaningful Quiz result, record at most one `quiz` checkpoint tied in plain language to
+the active weakness. Quiz completion alone never changes mastery.
 
 ## Handle A Card Action
 

@@ -12,12 +12,18 @@ test("stdio server lists and executes the persistent quiz tools", async () => {
   const pluginRoot = resolve(here, "..");
   const mcpConfig = JSON.parse(await import("node:fs/promises").then(({ readFile }) => readFile(join(pluginRoot, ".mcp.json"), "utf8")));
   const configured = mcpConfig.mcpServers.ielts_writing_quiz;
-  const databasePath = join(mkdtempSync(join(tmpdir(), "ielts-quiz-mcp-")), "sessions.sqlite");
+  const testDirectory = mkdtempSync(join(tmpdir(), "ielts-quiz-mcp-"));
+  const databasePath = join(testDirectory, "sessions.sqlite");
+  const learningDataDirectory = join(testDirectory, "learning-memory");
   const transport = new StdioClientTransport({
     command: configured.command,
     args: configured.args,
     cwd: pluginRoot,
-    env: { IELTS_QUIZ_DB_PATH: databasePath, HOME: process.env.HOME },
+    env: {
+      IELTS_QUIZ_DB_PATH: databasePath,
+      IELTS_LEARNING_DATA_DIR: learningDataDirectory,
+      HOME: process.env.HOME,
+    },
     stderr: "pipe",
   });
   const client = new Client({ name: "ielts-writing-quiz-test", version: "0.1.0" });
@@ -26,8 +32,45 @@ test("stdio server lists and executes the persistent quiz tools", async () => {
     const listed = await client.listTools();
     assert.deepEqual(
       listed.tools.map((tool) => tool.name).sort(),
-      ["quiz_commit_transition", "quiz_create_session", "quiz_delete_session", "quiz_get_latest_session", "quiz_get_session"],
+      [
+        "learning_close_method",
+        "learning_get_memory",
+        "learning_list_methods",
+        "learning_record_checkpoint",
+        "learning_start_method",
+        "learning_switch_method",
+        "quiz_commit_transition",
+        "quiz_create_session",
+        "quiz_delete_session",
+        "quiz_get_latest_session",
+        "quiz_get_session",
+      ],
     );
+
+    const methods = await client.callTool({
+      name: "learning_list_methods",
+      arguments: { taskType: "task2" },
+    });
+    assert.equal(methods.structuredContent.methods.length, 8);
+
+    const emptyMemory = await client.callTool({ name: "learning_get_memory", arguments: {} });
+    assert.equal(emptyMemory.structuredContent.revision, 0);
+
+    const startedMethod = await client.callTool({
+      name: "learning_start_method",
+      arguments: {
+        expectedRevision: 0,
+        eventId: "mcp-start-1",
+        methodId: "argument-ladder",
+        taskType: "task2",
+        targetWeakness: "论证解释链断裂",
+        reason: "作文证据显示观点与结果之间缺少机制",
+        baselineEvidence: "This is helpful, so society improves.",
+      },
+    });
+    assert.equal(startedMethod.isError, undefined);
+    assert.equal(startedMethod.structuredContent.activeMethod.id, "argument-ladder");
+    assert.equal(startedMethod.structuredContent.revision, 1);
 
     const created = await client.callTool({
       name: "quiz_create_session",

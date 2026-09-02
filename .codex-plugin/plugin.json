@@ -1,15 +1,15 @@
 {
   "name": "ielts-writing-quiz",
-  "version": "0.1.1+codex.20260902121549",
-  "description": "Persistent IELTS Writing micro-quizzes powered by the active Codex model.",
+  "version": "0.2.0",
+  "description": "Evidence-grounded IELTS Writing methods, learning memory, and micro-quizzes powered by the active Codex model.",
   "author": {
     "name": "Hans"
   },
   "skills": "./skills/",
   "interface": {
-    "displayName": "IELTS Writing Quiz",
-    "shortDescription": "Practice one writing move at a time.",
-    "longDescription": "Generate evidence-grounded IELTS Writing micro-quizzes, keep progress locally, and use the active Codex model for hints and evaluation.",
+    "displayName": "IELTS Writing Learning Coach",
+    "shortDescription": "Choose a method, practice, and preserve learning evidence.",
+    "longDescription": "Diagnose one writing blocker, choose from nine evidence-grounded learning methods, keep concise progress in local Markdown, and use persistent micro-quizzes for targeted practice.",
     "developerName": "Hans",
     "category": "Education",
     "capabilities": [
@@ -17,6 +17,8 @@
       "Write"
     ],
     "defaultPrompt": [
+      "根据这篇作文判断当前最适合的写作提升方法，并说明依据。",
+      "读取我的学习记忆，告诉我应该继续还是切换方法。",
       "Turn this IELTS essay into a three-question writing quiz.",
       "Resume my latest IELTS Writing quiz."
     ]

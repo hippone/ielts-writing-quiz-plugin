@@ -2,9 +2,11 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { QuizSessionStore, QuizStateError } from "./session-store.mjs";
+import { LearningMemoryError, LearningMemoryStore } from "./learning-memory-store.mjs";
 
-const server = new McpServer({ name: "ielts-writing-quiz", version: "0.1.1" });
+const server = new McpServer({ name: "ielts-writing-quiz", version: "0.2.0" });
 const store = new QuizSessionStore();
+const learningMemory = new LearningMemoryStore();
 
 const itemShape = z.object({
   id: z.string().min(1).max(120),
@@ -41,10 +43,10 @@ function ok(data) {
 }
 
 function fail(error) {
-  const payload = error instanceof QuizStateError
+  const payload = error instanceof QuizStateError || error instanceof LearningMemoryError
     ? { error: { code: error.code, message: error.message, details: error.details } }
     : { error: { code: "INTERNAL_ERROR", message: "The quiz session operation failed." } };
-  if (!(error instanceof QuizStateError)) console.error(error);
+  if (!(error instanceof QuizStateError) && !(error instanceof LearningMemoryError)) console.error(error);
   return {
     isError: true,
     content: [{ type: "text", text: JSON.stringify(payload) }],
@@ -109,6 +111,89 @@ server.registerTool("quiz_commit_transition", {
   annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
 }, async (input) => {
   try { return ok(store.commit(input)); } catch (error) { return fail(error); }
+});
+
+server.registerTool("learning_list_methods", {
+  title: "List IELTS Writing learning methods",
+  description: "Return the fixed nine-method catalog, optionally filtered by IELTS task. Use the active Codex model to choose from compatible methods using essay evidence and learner context.",
+  inputSchema: { taskType: z.enum(["task1", "task2"]).optional() },
+  annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+}, async ({ taskType }) => {
+  try { return ok({ methods: learningMemory.listMethods(taskType) }); } catch (error) { return fail(error); }
+});
+
+server.registerTool("learning_get_memory", {
+  title: "Get IELTS Writing learning memory",
+  description: "Read the current concise learning summary and one-line event history from the local Markdown memory before any update.",
+  inputSchema: {},
+  annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+}, async () => {
+  try { return ok(learningMemory.read()); } catch (error) { return fail(error); }
+});
+
+server.registerTool("learning_start_method", {
+  title: "Start one IELTS Writing learning method",
+  description: "Start one compatible method for one evidence-grounded weakness. Only one method may be active, and the update appends one natural-language Markdown event.",
+  inputSchema: {
+    expectedRevision: z.number().int().min(0),
+    eventId: z.string().min(1).max(160),
+    methodId: z.string().min(1).max(120),
+    taskType: z.enum(["task1", "task2"]),
+    targetWeakness: z.string().min(1).max(500),
+    reason: z.string().min(1).max(800),
+    baselineEvidence: z.string().min(1).max(1200),
+  },
+  annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+}, async (input) => {
+  try { return ok(learningMemory.start(input)); } catch (error) { return fail(error); }
+});
+
+server.registerTool("learning_record_checkpoint", {
+  title: "Record one IELTS Writing learning checkpoint",
+  description: "Append one meaningful method, rewrite, Quiz, or transfer result to Markdown and refresh the concise learning memory. This does not assign an IELTS band score.",
+  inputSchema: {
+    expectedRevision: z.number().int().min(0),
+    eventId: z.string().min(1).max(160),
+    evidenceKind: z.enum(["method_session", "same_prompt_rewrite", "quiz", "different_topic_transfer", "delayed_transfer"]),
+    sessionNumber: z.number().int().min(1).max(5).optional(),
+    outcome: z.enum(["met", "partially_met", "not_met", "inconclusive"]),
+    assistanceLevel: z.enum(["L0", "L1", "L2", "L3"]),
+    timed: z.boolean(),
+    evidence: z.string().min(1).max(1200),
+    nextAction: z.string().min(1).max(800),
+  },
+  annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+}, async (input) => {
+  try { return ok(learningMemory.recordCheckpoint(input)); } catch (error) { return fail(error); }
+});
+
+server.registerTool("learning_switch_method", {
+  title: "Switch IELTS Writing learning method",
+  description: "Explicitly switch the active method after learner confirmation while preserving the prior method's Markdown history.",
+  inputSchema: {
+    expectedRevision: z.number().int().min(0),
+    eventId: z.string().min(1).max(160),
+    toMethodId: z.string().min(1).max(120),
+    reason: z.string().min(1).max(800),
+    learnerConfirmed: z.boolean(),
+  },
+  annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+}, async (input) => {
+  try { return ok(learningMemory.switchMethod(input)); } catch (error) { return fail(error); }
+});
+
+server.registerTool("learning_close_method", {
+  title: "Close IELTS Writing learning method",
+  description: "Close the active method with one concise conclusion. Closing a method never creates a mastery or IELTS band claim.",
+  inputSchema: {
+    expectedRevision: z.number().int().min(0),
+    eventId: z.string().min(1).max(160),
+    conclusion: z.string().min(1).max(800),
+    nextAction: z.string().min(1).max(800),
+  },
+  annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+}, async (input) => {
+  try { return ok(learningMemory.closeMethod(input)); } catch (error) { return fail(error); }
 });
 
 process.on("SIGINT", () => { store.close(); process.exit(0); });
