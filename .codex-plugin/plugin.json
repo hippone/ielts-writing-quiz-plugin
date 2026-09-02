@@ -1,0 +1,25 @@
+{
+  "name": "ielts-writing-quiz",
+  "version": "0.1.1+codex.20260902121549",
+  "description": "Persistent IELTS Writing micro-quizzes powered by the active Codex model.",
+  "author": {
+    "name": "Hans"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "IELTS Writing Quiz",
+    "shortDescription": "Practice one writing move at a time.",
+    "longDescription": "Generate evidence-grounded IELTS Writing micro-quizzes, keep progress locally, and use the active Codex model for hints and evaluation.",
+    "developerName": "Hans",
+    "category": "Education",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Turn this IELTS essay into a three-question writing quiz.",
+      "Resume my latest IELTS Writing quiz."
+    ]
+  },
+  "mcpServers": "./.mcp.json"
+}

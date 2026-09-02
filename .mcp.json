@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "ielts_writing_quiz": {
+      "command": "/Applications/ChatGPT.app/Contents/Resources/cua_node/bin/node",
+      "args": [
+        "server/index.mjs"
+      ],
+      "cwd": ".",
+      "enabled": true,
+      "startup_timeout_sec": 30,
+      "env_vars": []
+    }
+  }
+}
