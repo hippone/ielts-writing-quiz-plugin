@@ -5,7 +5,7 @@ import { QuizSessionStore, QuizStateError } from "./session-store.mjs";
 import { LearningMemoryError, LearningMemoryStore } from "./learning-memory-store.mjs";
 import { PluginVersionChecker } from "./version-check.mjs";
 
-const server = new McpServer({ name: "ielts-writing-quiz", version: "0.2.1" });
+const server = new McpServer({ name: "ielts-writing-quiz", version: "0.3.0" });
 const store = new QuizSessionStore();
 const learningMemory = new LearningMemoryStore();
 const versionChecker = new PluginVersionChecker();
@@ -138,6 +138,15 @@ server.registerTool("learning_get_memory", {
   annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
 }, async () => {
   try { return ok(learningMemory.read()); } catch (error) { return fail(error); }
+});
+
+server.registerTool("learning_review_direction", {
+  title: "Review IELTS Writing learning direction",
+  description: "Read the active method's concise Markdown history and return a guarded continue, reduce-scope, transfer, close, or consider-switch signal. This tool never switches a method or declares IELTS score improvement.",
+  inputSchema: {},
+  annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+}, async () => {
+  try { return ok(learningMemory.reviewDirection()); } catch (error) { return fail(error); }
 });
 
 server.registerTool("learning_start_method", {

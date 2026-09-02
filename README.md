@@ -13,6 +13,8 @@ long-term learning record readable in one Markdown file.
 - Local SQLite-backed quiz session server
 - Nine-method catalog and evidence-grounded selection guidance
 - One-file Markdown learning memory with concise event sentences
+- Read-only recent-three checkpoint review for continue, scope reduction, transfer,
+  or learner-confirmed switching decisions
 - Multi-window revision checks, process locking, idempotency, and atomic writes
 - Non-blocking GitHub version check cached for six hours
 - Codex card renderer
@@ -59,6 +61,7 @@ The learning tools are:
 
 - `learning_list_methods`
 - `learning_get_memory`
+- `learning_review_direction`
 - `learning_start_method`
 - `learning_record_checkpoint`
 - `learning_switch_method`

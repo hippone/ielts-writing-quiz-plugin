@@ -36,6 +36,7 @@ rewrite. Do not infer a method from a criterion label alone.
 ## Continue Or Switch
 
 Observe after every meaningful artifact, but recommend switching only at a checkpoint.
+Use `learning_review_direction` to inspect the current run before making that recommendation.
 
 - Continue after one `not_met`; reduce the unit or unlock only the next help rung.
 - Continue when the target move improves on a different prompt without creating a
@@ -48,6 +49,8 @@ Observe after every meaningful artifact, but recommend switching only at a check
 - A switch is only a recommendation until the learner explicitly confirms it.
 - Preserve the previous method and evidence as abandoned history. Never convert a
   switch into completion, mastery, or an IELTS score claim.
+- Keep the practice unit progressive: one observable move first, then sentence group,
+  paragraph or overview, and only then a whole response when the method requires it.
 
 ## Evidence Boundary
 

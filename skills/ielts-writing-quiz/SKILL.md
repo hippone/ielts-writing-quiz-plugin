@@ -32,6 +32,8 @@ Never pull, reinstall, or change files merely because a newer version exists.
 - Do not reveal a model sentence, completed reasoning chain, private checklist, prompt metadata, or internal skill code.
 - Do not score the essay unless the user separately requests assessment.
 - Keep quoted learner evidence exact and in its original language.
+- Keep feedback bounded: show one primary blocker and one next action. Add at most two
+  secondary observations only when omitting them would materially misdiagnose the task.
 
 ## Choose And Track A Learning Method
 
@@ -41,13 +43,16 @@ current weakness is resolved:
 1. Read [references/learning-methods.md](references/learning-methods.md).
 2. Read [references/learning-memory.md](references/learning-memory.md).
 3. Call `learning_get_memory` before using prior learning state.
-4. Ground one current weakness in an exact learner quote. If there is no essay or
+4. When a method is active, call `learning_review_direction` before recommending whether
+   to continue, reduce the task, transfer, close, or consider switching. Treat its result
+   as a guard signal, not as an automatic pedagogical judgment.
+5. Ground one current weakness in an exact learner quote. If there is no essay or
    learner-owned artifact, ask for it rather than inventing a diagnosis.
-5. Call `learning_list_methods` when task compatibility is not already known, then
+6. Call `learning_list_methods` when task compatibility is not already known, then
    recommend one primary method using the active model. Do not claim effectiveness.
-6. Start, record, switch, or close through the matching learning tool. Never edit the
+7. Start, record, switch, or close through the matching learning tool. Never edit the
    learning-memory file directly.
-7. Record only checkpoints that change the next learning decision. One successful
+8. Record only checkpoints that change the next learning decision. One successful
    mutation adds one natural-language line and refreshes the summary in the same
    `LEARNING_MEMORY.md` file.
 

@@ -37,6 +37,7 @@ test("stdio server lists and executes the persistent quiz tools", async () => {
         "learning_get_memory",
         "learning_list_methods",
         "learning_record_checkpoint",
+        "learning_review_direction",
         "learning_start_method",
         "learning_switch_method",
         "plugin_check_update",
@@ -72,6 +73,10 @@ test("stdio server lists and executes the persistent quiz tools", async () => {
     assert.equal(startedMethod.isError, undefined);
     assert.equal(startedMethod.structuredContent.activeMethod.id, "argument-ladder");
     assert.equal(startedMethod.structuredContent.revision, 1);
+
+    const direction = await client.callTool({ name: "learning_review_direction", arguments: {} });
+    assert.equal(direction.structuredContent.action, "continue_method");
+    assert.equal(direction.structuredContent.revision, 1);
 
     const created = await client.callTool({
       name: "quiz_create_session",

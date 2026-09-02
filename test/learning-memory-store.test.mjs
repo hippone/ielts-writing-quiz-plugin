@@ -214,3 +214,118 @@ test("recovers a lock left by a terminated writer", () => {
   const started = store.start(startInput());
   assert.equal(started.revision, 1);
 });
+
+test("reviews recent checkpoints without writing another memory event", () => {
+  const store = setup();
+  store.start(startInput());
+
+  for (let sessionNumber = 1; sessionNumber <= 3; sessionNumber += 1) {
+    store.recordCheckpoint({
+      expectedRevision: sessionNumber,
+      eventId: `session-not-met-${sessionNumber}`,
+      evidenceKind: "method_session",
+      sessionNumber,
+      outcome: "not_met",
+      assistanceLevel: "L1",
+      timed: false,
+      evidence: `第 ${sessionNumber} 次仍从观点直接跳到结果`,
+      nextAction: "缩小训练单位",
+    });
+  }
+
+  const before = readFileSync(store.memoryPath, "utf8");
+  const reduced = store.reviewDirection();
+  assert.equal(reduced.action, "reduce_scope");
+  assert.equal(reduced.signal, "recent_3_not_met");
+  assert.equal(reduced.recentThreeNotMet, true);
+  assert.deepEqual(reduced.evidenceWindow.map(({ outcome }) => outcome), ["not_met", "not_met", "not_met"]);
+  assert.equal(readFileSync(store.memoryPath, "utf8"), before);
+
+  store.recordCheckpoint({
+    expectedRevision: 4,
+    eventId: "transfer-not-met",
+    evidenceKind: "different_topic_transfer",
+    outcome: "not_met",
+    assistanceLevel: "L0",
+    timed: true,
+    evidence: "陌生题中仍缺少中间机制",
+    nextAction: "考虑更换训练方法",
+  });
+  const switchReview = store.reviewDirection();
+  assert.equal(switchReview.action, "consider_switch");
+  assert.equal(switchReview.signal, "trial_complete_transfer_failed");
+  assert.equal(switchReview.requiresLearnerConfirmation, true);
+
+  store.switchMethod({
+    expectedRevision: 5,
+    eventId: "switch-after-review",
+    toMethodId: "feedback-rewrite-transfer",
+    reason: "完成规定训练后，陌生题仍出现同一问题",
+    learnerConfirmed: true,
+  });
+  const freshRun = store.reviewDirection();
+  assert.equal(freshRun.action, "continue_method");
+  assert.deepEqual(freshRun.evidenceWindow, []);
+  assert.equal(freshRun.recentThreeNotMet, false);
+});
+
+test("reviews same-prompt, provisional, and stable evidence as separate next steps", () => {
+  const store = setup();
+  assert.equal(store.reviewDirection().action, "diagnose_weakness");
+  store.start(startInput());
+
+  store.recordCheckpoint({
+    expectedRevision: 1,
+    eventId: "rewrite-met",
+    evidenceKind: "same_prompt_rewrite",
+    outcome: "met",
+    assistanceLevel: "L0",
+    timed: false,
+    evidence: "同题段落已补出完整机制",
+    nextAction: "做陌生题迁移",
+  });
+  assert.equal(store.reviewDirection().action, "run_different_topic_transfer");
+
+  store.recordCheckpoint({
+    expectedRevision: 2,
+    eventId: "transfer-met",
+    evidenceKind: "different_topic_transfer",
+    outcome: "met",
+    assistanceLevel: "L0",
+    timed: true,
+    evidence: "陌生题独立完成",
+    nextAction: "等待延迟复测",
+  });
+  assert.equal(store.reviewDirection().action, "run_delayed_transfer");
+
+  store.recordCheckpoint({
+    expectedRevision: 3,
+    eventId: "delayed-met",
+    evidenceKind: "delayed_transfer",
+    outcome: "met",
+    assistanceLevel: "L0",
+    timed: true,
+    evidence: "延迟后再次独立完成",
+    nextAction: "结束当前方法",
+  });
+  assert.equal(store.reviewDirection().action, "close_or_choose_next");
+});
+
+test("fails closed when a checkpoint sentence no longer matches the harness format", () => {
+  const store = setup();
+  store.start(startInput());
+  store.recordCheckpoint({
+    expectedRevision: 1,
+    eventId: "checkpoint-before-corruption",
+    evidenceKind: "quiz",
+    outcome: "not_met",
+    assistanceLevel: "L1",
+    timed: false,
+    evidence: "仍缺少机制",
+    nextAction: "继续",
+  });
+  const source = readFileSync(store.memoryPath, "utf8");
+  writeFileSync(store.memoryPath, source.replace("结果为【未达到】", "结果被手工删除"));
+  assert.throws(() => store.reviewDirection(),
+    (error) => error instanceof LearningMemoryError && error.code === "MEMORY_CORRUPT");
+});

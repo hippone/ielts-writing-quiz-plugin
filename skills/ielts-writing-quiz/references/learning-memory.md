@@ -48,6 +48,23 @@ delayed check is also timed and L0.
 
 ## Switch And Close
 
+Before deciding, call `learning_review_direction`. It reads only the current run's
+one-line checkpoints and does not write another event. Use its signals conservatively:
+
+- `continue_method`: there is not enough evidence to change direction;
+- `reduce_scope`: three recent checkpoints remain `not_met`; shrink the work to one
+  observable move, sentence group, paragraph, or Task 1 overview;
+- `run_different_topic_transfer`: the next missing proof is a new-topic attempt;
+- `run_delayed_transfer`: provisional evidence needs a later new-topic attempt;
+- `consider_switch`: the planned trial is complete and an unfamiliar-prompt transfer
+  still failed; explain this evidence and ask the learner before switching;
+- `close_or_choose_next`: stable local evidence supports ending this method, without
+  claiming an IELTS band increase.
+
+The three-checkpoint window is a recurrence signal, not a score and not an automatic
+switch. A `met`, `partially_met`, or `inconclusive` result breaks a consecutive
+`not_met` sequence.
+
 When evidence suggests switching, explain the evidence and ask for confirmation. Do
 not call `learning_switch_method` with `learnerConfirmed=true` unless the learner has
 actually confirmed. Switching preserves the old event lines and starts a new run at

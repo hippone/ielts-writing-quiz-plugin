@@ -21,6 +21,13 @@ const EVIDENCE_KINDS = new Set([
   "delayed_transfer",
 ]);
 
+const OUTCOME_FROM_LABEL = new Map([
+  ["达到", "met"],
+  ["部分达到", "partially_met"],
+  ["未达到", "not_met"],
+  ["证据不足", "inconclusive"],
+]);
+
 export const LEARNING_METHODS = Object.freeze([
   { id: "argument-ladder", title: "论证追问链", tasks: ["task2"], sessions: 3, trigger: "有观点但论证展开不足", proof: "学习者写出的解释链与陌生题段落" },
   { id: "model-to-transfer", title: "范文拆解到迁移", tasks: ["task1", "task2"], sessions: 3, trigger: "能看懂范文但无法迁移", proof: "功能图、规则卡与闭卷新题" },
@@ -138,6 +145,75 @@ export class LearningMemoryStore {
   read() {
     const state = this.#readState();
     return this.#project(state);
+  }
+
+  reviewDirection() {
+    const state = this.#readState();
+    const checkpoints = this.#currentRunCheckpoints();
+    const evidenceWindow = checkpoints.slice(-3);
+    const recentThreeNotMet = evidenceWindow.length === 3
+      && evidenceWindow.every((checkpoint) => checkpoint.outcome === "not_met");
+
+    if (!state.activeMethodId) {
+      return this.#direction(state, evidenceWindow, {
+        action: "diagnose_weakness",
+        signal: "no_active_method",
+        reason: "当前没有活动方法，需要先用学习者原文确认一个主弱点。",
+      });
+    }
+    if (state.skillStatus === "stable") {
+      return this.#direction(state, evidenceWindow, {
+        action: "close_or_choose_next",
+        signal: "stable_local_evidence",
+        reason: "已有延迟、限时、无帮助的陌生题证据，可以结束当前方法或选择下一个主弱点。",
+      });
+    }
+    if (state.skillStatus === "provisional") {
+      return this.#direction(state, evidenceWindow, {
+        action: "run_delayed_transfer",
+        signal: "provisional_transfer_met",
+        reason: "陌生题已暂定通过，下一项有效证据应是延迟迁移复测。",
+      });
+    }
+    if (state.skillStatus === "same_prompt_resolved") {
+      return this.#direction(state, evidenceWindow, {
+        action: "run_different_topic_transfer",
+        signal: "same_prompt_resolved",
+        reason: "同题修复不能证明迁移，下一项有效证据应来自不同话题。",
+      });
+    }
+
+    const latestCheckpoint = checkpoints.at(-1);
+    const trialComplete = state.latestSession >= state.plannedSessions;
+    if (trialComplete
+      && latestCheckpoint?.context === "陌生题迁移检查"
+      && latestCheckpoint.outcome === "not_met") {
+      return this.#direction(state, evidenceWindow, {
+        action: "consider_switch",
+        signal: "trial_complete_transfer_failed",
+        reason: "规定训练次数已完成，但当前弱点在陌生题中仍未解决；可以提出切换建议，实际切换仍需学习者确认。",
+        requiresLearnerConfirmation: true,
+      });
+    }
+    if (recentThreeNotMet) {
+      return this.#direction(state, evidenceWindow, {
+        action: "reduce_scope",
+        signal: "recent_3_not_met",
+        reason: "最近三个关键检查点都未解决同一主弱点，应先把任务缩小到最小可练动作。",
+      });
+    }
+    if (trialComplete) {
+      return this.#direction(state, evidenceWindow, {
+        action: "run_different_topic_transfer",
+        signal: "trial_complete_transfer_missing",
+        reason: "规定训练次数已完成，但还缺少陌生题迁移证据。",
+      });
+    }
+    return this.#direction(state, evidenceWindow, {
+      action: "continue_method",
+      signal: "insufficient_switch_evidence",
+      reason: "现有证据不足以支持切换，继续当前方法并只记录会改变下一步的检查点。",
+    });
   }
 
   start(input) {
@@ -377,6 +453,44 @@ export class LearningMemoryStore {
       nextAction: state.nextAction,
       files: { memory: this.memoryPath },
     };
+  }
+
+  #direction(state, evidenceWindow, decision) {
+    return {
+      schemaVersion: "learning_direction.v1",
+      revision: state.revision,
+      targetWeakness: state.targetWeakness,
+      activeMethod: state.activeMethodId
+        ? { id: state.activeMethodId, title: METHOD_BY_ID.get(state.activeMethodId)?.title }
+        : null,
+      progress: state.activeMethodId
+        ? { completedSessions: state.latestSession, plannedSessions: state.plannedSessions }
+        : null,
+      skillStatus: state.skillStatus,
+      evidenceWindow,
+      recentThreeNotMet: evidenceWindow.length === 3
+        && evidenceWindow.every((checkpoint) => checkpoint.outcome === "not_met"),
+      requiresLearnerConfirmation: false,
+      ...decision,
+    };
+  }
+
+  #currentRunCheckpoints() {
+    if (!existsSync(this.memoryPath)) return [];
+    const lines = readFileSync(this.memoryPath, "utf8").split("\n");
+    let runStart = -1;
+    for (let index = 0; index < lines.length; index += 1) {
+      if (/kind="(?:method_started|method_switched)"/u.test(lines[index])) runStart = index;
+    }
+    if (runStart < 0) return [];
+    return lines.slice(runStart + 1).flatMap((line) => {
+      if (!/kind="checkpoint_recorded"/u.test(line)) return [];
+      const match = line.match(/的(.+?)中，结果为【(达到|部分达到|未达到|证据不足)】/u);
+      if (!match) {
+        throw new LearningMemoryError("MEMORY_CORRUPT", "A learning checkpoint cannot be read from LEARNING_MEMORY.md");
+      }
+      return [{ context: match[1], outcome: OUTCOME_FROM_LABEL.get(match[2]) }];
+    });
   }
 
   #writeMemory(state, eventLine) {
