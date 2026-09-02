@@ -2,13 +2,19 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 export const DEFAULT_REMOTE_MANIFEST_URL =
-  "https://raw.githubusercontent.com/hippone/ielts-writing-quiz-plugin/main/.codex-plugin/plugin.json";
+  "https://api.github.com/repos/hippone/ielts-writing-quiz-plugin/contents/.codex-plugin/plugin.json?ref=main";
 
 const DEFAULT_CACHE_MS = 6 * 60 * 60 * 1000;
 const MAX_MANIFEST_BYTES = 64 * 1024;
 
 function coreVersion(version) {
   return version.split("+", 1)[0];
+}
+
+function cacheBustedUrl(source, now) {
+  const url = new URL(source);
+  url.searchParams.set("checked_at", String(now.getTime()));
+  return url.toString();
 }
 
 function versionParts(version) {
@@ -70,9 +76,9 @@ export class PluginVersionChecker {
     let result;
     try {
       if (typeof this.fetchImpl !== "function") throw new Error("fetch_unavailable");
-      const response = await this.fetchImpl(this.remoteManifestUrl, {
+      const response = await this.fetchImpl(cacheBustedUrl(this.remoteManifestUrl, now), {
         method: "GET",
-        headers: { accept: "application/json", "user-agent": "ielts-writing-quiz-plugin-version-check" },
+        headers: { accept: "application/vnd.github.raw+json", "user-agent": "ielts-writing-quiz-plugin-version-check" },
         redirect: "follow",
         signal: AbortSignal.timeout(5_000),
       });

@@ -68,9 +68,11 @@ The learning tools are:
 - `learning_close_method`
 
 `plugin_check_update` compares the installed manifest with the public GitHub `main`
-manifest at the beginning of a plugin workflow. A newer version is reported but never
-installed automatically. Network failure degrades silently and does not block Quiz or
-learning-memory operations.
+manifest at the beginning of a plugin workflow. The network request uses GitHub's
+contents endpoint to avoid stale raw-file caches, while successful results are reused
+locally for six hours. A newer version
+is reported but never installed automatically. Network failure degrades silently and
+does not block Quiz or learning-memory operations.
 
 Method completion, same-prompt repair, Quiz performance, transfer evidence, and IELTS
 band movement remain separate conclusions. Only a timed, assistance-free,

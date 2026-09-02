@@ -38,12 +38,15 @@ test("reports current, update available, and local ahead states", async () => {
 
 test("caches a successful check and supports an explicit refresh", async () => {
   let calls = 0;
+  const requestedUrls = [];
   const checker = new PluginVersionChecker({
     localVersion: "0.2.1",
-    fetchImpl: async () => {
+    fetchImpl: async (url) => {
       calls += 1;
+      requestedUrls.push(url);
       return response("0.2.1");
     },
+    now: () => new Date("2026-09-03T00:00:00.000Z"),
   });
 
   assert.equal((await checker.check()).cached, false);
@@ -51,6 +54,7 @@ test("caches a successful check and supports an explicit refresh", async () => {
   assert.equal(calls, 1);
   assert.equal((await checker.check({ force: true })).cached, false);
   assert.equal(calls, 2);
+  assert.ok(requestedUrls.every((url) => new URL(url).searchParams.get("checked_at") === "1788393600000"));
 });
 
 test("degrades gracefully when GitHub is unavailable or invalid", async () => {

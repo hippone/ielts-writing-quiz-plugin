@@ -5,7 +5,7 @@ import { QuizSessionStore, QuizStateError } from "./session-store.mjs";
 import { LearningMemoryError, LearningMemoryStore } from "./learning-memory-store.mjs";
 import { PluginVersionChecker } from "./version-check.mjs";
 
-const server = new McpServer({ name: "ielts-writing-quiz", version: "0.3.0" });
+const server = new McpServer({ name: "ielts-writing-quiz", version: "0.3.1" });
 const store = new QuizSessionStore();
 const learningMemory = new LearningMemoryStore();
 const versionChecker = new PluginVersionChecker();
