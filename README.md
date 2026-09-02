@@ -14,6 +14,7 @@ long-term learning record readable in one Markdown file.
 - Nine-method catalog and evidence-grounded selection guidance
 - One-file Markdown learning memory with concise event sentences
 - Multi-window revision checks, process locking, idempotency, and atomic writes
+- Non-blocking GitHub version check cached for six hours
 - Codex card renderer
 - Node.js and Python tests
 - Locked production dependencies
@@ -62,6 +63,11 @@ The learning tools are:
 - `learning_record_checkpoint`
 - `learning_switch_method`
 - `learning_close_method`
+
+`plugin_check_update` compares the installed manifest with the public GitHub `main`
+manifest at the beginning of a plugin workflow. A newer version is reported but never
+installed automatically. Network failure degrades silently and does not block Quiz or
+learning-memory operations.
 
 Method completion, same-prompt repair, Quiz performance, transfer evidence, and IELTS
 band movement remain separate conclusions. Only a timed, assistance-free,

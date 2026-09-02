@@ -39,6 +39,7 @@ test("stdio server lists and executes the persistent quiz tools", async () => {
         "learning_record_checkpoint",
         "learning_start_method",
         "learning_switch_method",
+        "plugin_check_update",
         "quiz_commit_transition",
         "quiz_create_session",
         "quiz_delete_session",

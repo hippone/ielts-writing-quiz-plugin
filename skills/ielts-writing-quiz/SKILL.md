@@ -10,6 +10,21 @@ and semantic evaluation. Use the bundled `ielts_writing_quiz` MCP tools only for
 authoritative Quiz state, concise Markdown learning memory, and transition validation;
 the MCP server does not call a model API.
 
+## Check For Updates
+
+At the beginning of each new plugin workflow, call `plugin_check_update` once with
+`force=false` before loading Quiz or learning state. The tool compares the installed
+manifest with the public GitHub `main` manifest and caches the result for six hours.
+
+- `current`: continue silently.
+- `local_ahead`: continue silently; this is expected during local development.
+- `update_available`: briefly state the installed and available versions, link to the
+  repository, and continue unless the user asks to update.
+- `unavailable` or `unknown`: continue without blocking the learning task. Mention the
+  failed check only when the user explicitly asks about update status.
+
+Never pull, reinstall, or change files merely because a newer version exists.
+
 ## Boundaries
 
 - This personal workflow does not grant product access, create a Repair Cycle, or reproduce application billing and authorization.

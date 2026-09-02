@@ -3,10 +3,12 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import { QuizSessionStore, QuizStateError } from "./session-store.mjs";
 import { LearningMemoryError, LearningMemoryStore } from "./learning-memory-store.mjs";
+import { PluginVersionChecker } from "./version-check.mjs";
 
-const server = new McpServer({ name: "ielts-writing-quiz", version: "0.2.0" });
+const server = new McpServer({ name: "ielts-writing-quiz", version: "0.2.1" });
 const store = new QuizSessionStore();
 const learningMemory = new LearningMemoryStore();
+const versionChecker = new PluginVersionChecker();
 
 const itemShape = z.object({
   id: z.string().min(1).max(120),
@@ -121,6 +123,13 @@ server.registerTool("learning_list_methods", {
 }, async ({ taskType }) => {
   try { return ok({ methods: learningMemory.listMethods(taskType) }); } catch (error) { return fail(error); }
 });
+
+server.registerTool("plugin_check_update", {
+  title: "Check IELTS Writing plugin version",
+  description: "Compare the installed plugin version with the public GitHub main manifest. Results are cached for six hours unless force is true; failure never blocks normal learning or Quiz use.",
+  inputSchema: { force: z.boolean().optional() },
+  annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+}, async ({ force }) => ok(await versionChecker.check({ force: force ?? false })));
 
 server.registerTool("learning_get_memory", {
   title: "Get IELTS Writing learning memory",

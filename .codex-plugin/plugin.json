@@ -1,6 +1,6 @@
 {
   "name": "ielts-writing-quiz",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Evidence-grounded IELTS Writing methods, learning memory, and micro-quizzes powered by the active Codex model.",
   "author": {
     "name": "Hans"
